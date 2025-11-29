@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> OBITO IMAGE MAKER</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+}
+
+#startScreen {
+    position: fixed;
+    top:0; left:0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#startScreen button {
+    padding: 20px 60px;
+    font-size: 26px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(45deg, #ff0066, #ff66cc);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    transition: transform 0.2s;
+}
+#startScreen button:hover { transform: scale(1.1); }
+
+#videoBackground {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+}
+
+#overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: -1;
+}
+
+#content {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 600px;
+    margin: 60px auto 0 auto;
+    text-align: center;
+    color: white;
+}
+
+#prompt {
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.3s;
+}
+#prompt:focus {
+    background: rgba(255,255,255,0.25);
+    box-shadow: 0 4px 25px rgba(255,255,255,0.4);
+}
+
+.generate-btn {
+    margin-top: 15px;
+    padding: 14px 25px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(45deg, #ff0066, #ff66cc);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+.generate-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(255,0,102,0.6);
+}
+.generate-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+#loadingText {
+    margin-top: 12px;
+    font-size: 1rem;
+    color: #ffeb3b;
+    display: none;
+    font-weight: 600;
+}
+
+#imageContainer {
+    display: none;
+    margin-top: 25px;
+    text-align: center;
+}
+
+#output {
+    max-width: 60%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+#downloadBtn {
+    display: none;
+    margin-top: 15px;
+    padding: 12px 25px;
+    border-radius: 12px;
+    border: none;
+    background: #00c853;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+#downloadBtn:hover { transform: scale(1.05); }
+
+</style>
+</head>
+
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen">
+    <button onclick="startApp()">START</button>
+</div>
+
+<!-- BACKGROUND VIDEO -->
+<video id="videoBackground" autoplay loop playsinline muted>
+    <source src="https://cdn.jsdelivr.net/gh/faizankhanchang22-gif/Fazanmonve@main/VID_20251129_153530_445.mp4" type="video/mp4">
+</video>
+
+<!-- OVERLAY -->
+<div id="overlay"></div>
+
+<!-- BACKGROUND MUSIC -->
+<audio id="bgMusic" loop>
+    <source src="https://files.catbox.moe/ya81su.mp3" type="audio/mpeg">
+</audio>
+
+<!-- MAIN CONTENT -->
+<div id="content">
+    <h1 style="font-size:2rem; margin-bottom:20px;">OBITO – Flux Pro Image Generator</h1>
+
+    <input id="prompt" type="text" placeholder="Enter your prompt...">
+    <br>
+    <button class="generate-btn" id="generateBtn" onclick="generateImage()">Generate Image</button>
+
+    <p id="loadingText">⏳ Please wait, generating image...</p>
+
+    <div id="imageContainer">
+        <img id="output">
+        <br>
+        <button id="downloadBtn" onclick="downloadImage()">Download Image</button>
+    </div>
+</div>
+
+<script>
+function startApp() {
+    document.getElementById("startScreen").style.display = "none";
+
+    const video = document.getElementById("videoBackground");
+    video.muted = false;
+    video.play().catch(()=>{});
+
+    const music = document.getElementById("bgMusic");
+    music.volume = 0.7;
+    music.play().catch(()=>{});
+}
+
+// IMAGE GENERATOR
+let currentImageUrl = "";
+async function generateImage() {
+    const text = document.getElementById("prompt").value.trim();
+    if(!text) return alert("Please enter a prompt!");
+
+    const generateBtn = document.getElementById("generateBtn");
+    const loadingText = document.getElementById("loadingText");
+    const img = document.getElementById("output");
+    const dlBtn = document.getElementById("downloadBtn");
+    const container = document.getElementById("imageContainer");
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = "Generating...";
+    loadingText.style.display = "block";
+    container.style.display = "none";
+
+    const apiURL = `https://flux-pro.vercel.app/generate?q=${encodeURIComponent(text)}`;
+    currentImageUrl = apiURL;
+
+    const image = new Image();
+    image.src = apiURL;
+    image.onload = () => {
+        img.src = apiURL;
+        container.style.display = "block";
+        dlBtn.style.display = "inline-block";
+
+        generateBtn.disabled = false;
+        generateBtn.textContent = "Generate Image";
+        loadingText.style.display = "none";
+    };
+    image.onerror = () => {
+        alert("Failed to load image. Try again!");
+        generateBtn.disabled = false;
+        generateBtn.textContent = "Generate Image";
+        loadingText.style.display = "none";
+    };
+}
+
+// DOWNLOAD IMAGE
+function downloadImage() {
+    if(!currentImageUrl) return;
+    const a = document.createElement("a");
+    a.href = currentImageUrl;
+    a.download = `OBITO_Image.png`;
+    a.click();
+}
+</script>
+
+</body>
+</html>
